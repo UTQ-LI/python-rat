@@ -3,7 +3,7 @@ import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from colorama import Fore
-from getpass import  getuser
+from getpass import getuser
 
 class Functions:
     def list_dir(self):
