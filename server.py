@@ -168,7 +168,7 @@ class Functions:
     def restart(self):
         try:
             os.system("shutdown /r /t 2")
-            f"{Fore.GREEN}Succsessfully the restarting!{Fore.RESET}"
+            return f"{Fore.GREEN}Succsessfully the restarting!{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
